@@ -5,6 +5,7 @@
  *
  * This file is derived from the flashrom project.
  */
+
 #include <common.h>
 #include <dm.h>
 #include <errno.h>
@@ -17,40 +18,13 @@
 
 #include "ich.h"
 
-#define SPI_OPCODE_WREN      0x06
-#define SPI_OPCODE_FAST_READ 0x0b
+DECLARE_GLOBAL_DATA_PTR;
 
 #ifdef DEBUG_TRACE
 #define debug_trace(fmt, args...) debug(fmt, ##args)
 #else
 #define debug_trace(x, args...)
 #endif
-
-struct ich_spi_platdata {
-	enum pch_version ich_version;	/* Controller version, 7 or 9 */
-};
-
-struct ich_spi_priv {
-	int ichspi_lock;
-	int locked;
-	int opmenu;
-	int menubytes;
-	void *base;		/* Base of register set */
-	int preop;
-	int optype;
-	int addr;
-	int data;
-	unsigned databytes;
-	int status;
-	int control;
-	int bbar;
-	int bcr;
-	uint32_t *pr;		/* only for ich9 */
-	int speed;		/* pointer to speed control */
-	ulong max_speed;	/* Maximum bus speed in MHz */
-	ulong cur_speed;	/* Current bus speed */
-	struct spi_trans trans;	/* current transaction in progress */
-};
 
 static u8 ich_readb(struct ich_spi_priv *priv, int reg)
 {
@@ -145,11 +119,11 @@ static int ich_init_controller(struct udevice *dev,
 	void *sbase;
 
 	/* SBASE is similar */
-	pch_get_sbase(dev->parent, &sbase_addr);
+	pch_get_spi_base(dev->parent, &sbase_addr);
 	sbase = (void *)sbase_addr;
 	debug("%s: sbase=%p\n", __func__, sbase);
 
-	if (plat->ich_version == PCHV_7) {
+	if (plat->ich_version == ICHV_7) {
 		struct ich7_spi_regs *ich7_spi = sbase;
 
 		ich7_spi = (struct ich7_spi_regs *)sbase;
@@ -165,7 +139,7 @@ static int ich_init_controller(struct udevice *dev,
 		ctlr->bbar = offsetof(struct ich7_spi_regs, bbar);
 		ctlr->preop = offsetof(struct ich7_spi_regs, preop);
 		ctlr->base = ich7_spi;
-	} else if (plat->ich_version == PCHV_9) {
+	} else if (plat->ich_version == ICHV_9) {
 		struct ich9_spi_regs *ich9_spi = sbase;
 
 		ctlr->ichspi_lock = readw(&ich9_spi->hsfs) & HSFS_FLOCKDN;
@@ -191,7 +165,7 @@ static int ich_init_controller(struct udevice *dev,
 
 	/* Work out the maximum speed we can support */
 	ctlr->max_speed = 20000000;
-	if (plat->ich_version == PCHV_9 && ich9_can_do_33mhz(dev))
+	if (plat->ich_version == ICHV_9 && ich9_can_do_33mhz(dev))
 		ctlr->max_speed = 33000000;
 	debug("ICH SPI: Version ID %d detected at %p, speed %ld\n",
 	      plat->ich_version, ctlr->base, ctlr->max_speed);
@@ -217,7 +191,7 @@ static void spi_setup_type(struct spi_trans *trans, int data_bytes)
 {
 	trans->type = 0xFF;
 
-	/* Try to guess spi type from read/write sizes. */
+	/* Try to guess spi type from read/write sizes */
 	if (trans->bytesin == 0) {
 		if (trans->bytesout + data_bytes > 4)
 			/*
@@ -301,7 +275,7 @@ static int spi_setup_opcode(struct ich_spi_priv *ctlr, struct spi_trans *trans)
 
 static int spi_setup_offset(struct spi_trans *trans)
 {
-	/* Separate the SPI address and data. */
+	/* Separate the SPI address and data */
 	switch (trans->type) {
 	case SPI_OPCODE_TYPE_READ_NO_ADDRESS:
 	case SPI_OPCODE_TYPE_WRITE_NO_ADDRESS:
@@ -410,7 +384,7 @@ static int ich_spi_xfer(struct udevice *dev, unsigned int bitlen,
 	trans->in = din;
 	trans->bytesin = din ? bytes : 0;
 
-	/* There has to always at least be an opcode. */
+	/* There has to always at least be an opcode */
 	if (!trans->bytesout) {
 		debug("ICH SPI: No opcode for transfer\n");
 		return -EPROTO;
@@ -420,7 +394,7 @@ static int ich_spi_xfer(struct udevice *dev, unsigned int bitlen,
 	if (ret < 0)
 		return ret;
 
-	if (plat->ich_version == PCHV_7)
+	if (plat->ich_version == ICHV_7)
 		ich_writew(ctlr, SPIS_CDS | SPIS_FCERR, ctlr->status);
 	else
 		ich_writeb(ctlr, SPIS_CDS | SPIS_FCERR, ctlr->status);
@@ -541,7 +515,7 @@ static int ich_spi_xfer(struct udevice *dev, unsigned int bitlen,
 		/* write it */
 		ich_writew(ctlr, control, ctlr->control);
 
-		/* Wait for Cycle Done Status or Flash Cycle Error. */
+		/* Wait for Cycle Done Status or Flash Cycle Error */
 		status = ich_status_poll(ctlr, SPIS_CDS | SPIS_FCERR, 1);
 		if (status < 0)
 			return status;
@@ -622,9 +596,6 @@ static int ich_spi_probe(struct udevice *dev)
 	uint8_t bios_cntl;
 	int ret;
 
-	/* Check the ICH version */
-	plat->ich_version = pch_get_version(dev->parent);
-
 	ret = ich_init_controller(dev, plat, priv);
 	if (ret)
 		return ret;
@@ -678,12 +649,31 @@ static int ich_spi_child_pre_probe(struct udevice *dev)
 	 * ICH 7 SPI controller only supports array read command
 	 * and byte program command for SST flash
 	 */
-	if (plat->ich_version == PCHV_7) {
+	if (plat->ich_version == ICHV_7) {
 		slave->mode_rx = SPI_RX_SLOW;
 		slave->mode = SPI_TX_BYTE;
 	}
 
 	return 0;
+}
+
+static int ich_spi_ofdata_to_platdata(struct udevice *dev)
+{
+	struct ich_spi_platdata *plat = dev_get_platdata(dev);
+	int ret;
+
+	ret = fdt_node_check_compatible(gd->fdt_blob, dev->of_offset,
+					"intel,ich7-spi");
+	if (ret == 0) {
+		plat->ich_version = ICHV_7;
+	} else {
+		ret = fdt_node_check_compatible(gd->fdt_blob, dev->of_offset,
+						"intel,ich9-spi");
+		if (ret == 0)
+			plat->ich_version = ICHV_9;
+	}
+
+	return ret;
 }
 
 static const struct dm_spi_ops ich_spi_ops = {
@@ -697,7 +687,8 @@ static const struct dm_spi_ops ich_spi_ops = {
 };
 
 static const struct udevice_id ich_spi_ids[] = {
-	{ .compatible = "intel,ich-spi" },
+	{ .compatible = "intel,ich7-spi" },
+	{ .compatible = "intel,ich9-spi" },
 	{ }
 };
 
@@ -706,6 +697,7 @@ U_BOOT_DRIVER(ich_spi) = {
 	.id	= UCLASS_SPI,
 	.of_match = ich_spi_ids,
 	.ops	= &ich_spi_ops,
+	.ofdata_to_platdata = ich_spi_ofdata_to_platdata,
 	.platdata_auto_alloc_size = sizeof(struct ich_spi_platdata),
 	.priv_auto_alloc_size = sizeof(struct ich_spi_priv),
 	.child_pre_probe = ich_spi_child_pre_probe,

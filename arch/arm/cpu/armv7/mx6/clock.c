@@ -638,10 +638,6 @@ void mxs_set_lcdclk(u32 base_addr, u32 freq)
 	}
 
 	temp = freq * max_pred * max_postd;
-	if (temp > max) {
-		puts("Please decrease freq, too large!\n");
-		return;
-	}
 	if (temp < min) {
 		/*
 		 * Register: PLL_VIDEO
@@ -742,8 +738,8 @@ int enable_lcdif_clock(u32 base_addr)
 	u32 lcdif_clk_sel_mask, lcdif_ccgr3_mask;
 
 	if (is_cpu_type(MXC_CPU_MX6SX)) {
-		if ((base_addr == LCDIF1_BASE_ADDR) ||
-		    (base_addr == LCDIF2_BASE_ADDR)) {
+		if ((base_addr != LCDIF1_BASE_ADDR) &&
+		    (base_addr != LCDIF2_BASE_ADDR)) {
 			puts("Wrong LCD interface!\n");
 			return -EINVAL;
 		}

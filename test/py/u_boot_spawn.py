@@ -56,8 +56,12 @@ class Spawn(object):
             finally:
                 os._exit(255)
 
-        self.poll = select.poll()
-        self.poll.register(self.fd, select.POLLIN | select.POLLPRI | select.POLLERR | select.POLLHUP | select.POLLNVAL)
+        try:
+            self.poll = select.poll()
+            self.poll.register(self.fd, select.POLLIN | select.POLLPRI | select.POLLERR | select.POLLHUP | select.POLLNVAL)
+        except:
+            self.close()
+            raise
 
     def kill(self, sig):
         """Send unix signal "sig" to the child process.
@@ -142,16 +146,20 @@ class Spawn(object):
                     earliest_pi = pi
                 if earliest_m:
                     pos = earliest_m.start()
-                    posafter = earliest_m.end() + 1
+                    posafter = earliest_m.end()
                     self.before = self.buf[:pos]
                     self.after = self.buf[pos:posafter]
                     self.buf = self.buf[posafter:]
                     return earliest_pi
                 tnow_s = time.time()
-                tdelta_ms = (tnow_s - tstart_s) * 1000
-                if tdelta_ms > self.timeout:
-                    raise Timeout()
-                events = self.poll.poll(self.timeout - tdelta_ms)
+                if self.timeout:
+                    tdelta_ms = (tnow_s - tstart_s) * 1000
+                    poll_maxwait = self.timeout - tdelta_ms
+                    if tdelta_ms > self.timeout:
+                        raise Timeout()
+                else:
+                    poll_maxwait = None
+                events = self.poll.poll(poll_maxwait)
                 if not events:
                     raise Timeout()
                 c = os.read(self.fd, 1024)

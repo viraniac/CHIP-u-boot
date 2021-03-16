@@ -156,7 +156,7 @@ static void setup_iomux_fec(void)
 
 	/* Reset LAN8720 PHY */
 	gpio_direction_output(ETH_PHY_RESET , 0);
-	udelay(1000);
+	udelay(25000);
 	gpio_set_value(ETH_PHY_RESET, 1);
 }
 
@@ -169,6 +169,11 @@ static struct fsl_esdhc_cfg usdhc_cfg[3] = {
 	{USDHC2_BASE_ADDR, 0, 4},
 	{USDHC3_BASE_ADDR, 0, 4},
 };
+
+int board_mmc_get_env_dev(int devno)
+{
+	return devno;
+}
 
 int board_mmc_getcd(struct mmc *mmc)
 {
@@ -197,7 +202,7 @@ int board_mmc_init(bd_t *bis)
 
 	/*
 	 * According to the board_mmc_init() the following map is done:
-	 * (U-boot device node)    (Physical Port)
+	 * (U-Boot device node)    (Physical Port)
 	 * mmc0                    USDHC1
 	 * mmc1                    USDHC2
 	 * mmc2                    USDHC3

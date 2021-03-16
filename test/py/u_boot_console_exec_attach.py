@@ -35,11 +35,13 @@ class ConsoleExecAttach(ConsoleBase):
         # HW flow control would mean this could be infinite.
         super(ConsoleExecAttach, self).__init__(log, config, max_fifo_fill=16)
 
-        self.log.action('Flashing U-Boot')
-        cmd = ['u-boot-test-flash', config.board_type, config.board_identity]
-        runner = self.log.get_runner(cmd[0], sys.stdout)
-        runner.run(cmd)
-        runner.close()
+        with self.log.section('flash'):
+            self.log.action('Flashing U-Boot')
+            cmd = ['u-boot-test-flash', config.board_type, config.board_identity]
+            runner = self.log.get_runner(cmd[0], sys.stdout)
+            runner.run(cmd)
+            runner.close()
+            self.log.status_pass('OK')
 
     def get_spawn(self):
         """Connect to a fresh U-Boot instance.
@@ -56,10 +58,14 @@ class ConsoleExecAttach(ConsoleBase):
         args = [self.config.board_type, self.config.board_identity]
         s = Spawn(['u-boot-test-console'] + args)
 
-        self.log.action('Resetting board')
-        cmd = ['u-boot-test-reset'] + args
-        runner = self.log.get_runner(cmd[0], sys.stdout)
-        runner.run(cmd)
-        runner.close()
+        try:
+            self.log.action('Resetting board')
+            cmd = ['u-boot-test-reset'] + args
+            runner = self.log.get_runner(cmd[0], sys.stdout)
+            runner.run(cmd)
+            runner.close()
+        except:
+            s.close()
+            raise
 
         return s

@@ -460,7 +460,7 @@ The following options need to be configured:
 
 		CONFIG_SYS_CPC_REINIT_F
 		This CONFIG is defined when the CPC is configured as SRAM at the
-		time of U-boot entry and is required to be re-initialized.
+		time of U-Boot entry and is required to be re-initialized.
 
 		CONFIG_DEEP_SLEEP
 		Indicates this SoC supports deep sleep feature. If deep sleep is
@@ -1023,7 +1023,6 @@ The following options need to be configured:
 		CONFIG_CMD_GO		* the 'go' command (exec code)
 		CONFIG_CMD_GREPENV	* search environment
 		CONFIG_CMD_HASH		* calculate hash / digest
-		CONFIG_CMD_HWFLOW	* RTS/CTS hw flow control
 		CONFIG_CMD_I2C		* I2C serial bus support
 		CONFIG_CMD_IDE		* IDE harddisk support
 		CONFIG_CMD_IMI		  iminfo
@@ -2905,6 +2904,14 @@ CBFS (Coreboot Filesystem) support
 		Enable editing and History functions for interactive
 		command line input operations
 
+- Command Line PS1/PS2 support:
+		CONFIG_CMDLINE_PS_SUPPORT
+
+		Enable support for changing the command prompt string
+		at run-time. Only static string is supported so far.
+		The string is obtained from environment variables PS1
+		and PS2.
+
 - Default Environment:
 		CONFIG_EXTRA_ENV_SETTINGS
 
@@ -2963,7 +2970,7 @@ CBFS (Coreboot Filesystem) support
 - Parallel Flash support:
 		CONFIG_SYS_NO_FLASH
 
-		Traditionally U-boot was run on systems with parallel NOR
+		Traditionally U-Boot was run on systems with parallel NOR
 		flash. This option is used to disable support for parallel NOR
 		flash. This option should be defined if the board does not have
 		parallel flash.
@@ -3712,17 +3719,6 @@ FIT uImage format:
 		CONFIG_SPL_PAD_TO must be either 0, meaning to append the SPL
 		payload without any padding, or >= CONFIG_SPL_MAX_SIZE.
 
-Modem Support:
---------------
-
-[so far only for SMDK2400 boards]
-
-- Modem support enable:
-		CONFIG_MODEM_SUPPORT
-
-- RTS/CTS Flow control enable:
-		CONFIG_HWFLOW
-
 - Interrupt support (PPC):
 
 		There are common interrupt_init() and timer_interrupt()
@@ -3736,22 +3732,6 @@ Modem Support:
 		/ other_activity_monitor it works automatically from
 		general timer_interrupt().
 
-- General:
-
-		In the target system modem support is enabled when a
-		specific key (key combination) is pressed during
-		power-on. Otherwise U-Boot will boot normally
-		(autoboot). The key_pressed() function is called from
-		board_init(). Currently key_pressed() is a dummy
-		function, returning 1 and thus enabling modem
-		initialization.
-
-		If there are no modem init strings in the
-		environment, U-Boot proceed to autoboot; the
-		previous output (banner, info printfs) will be
-		suppressed, though.
-
-		See also: doc/README.Modem
 
 Board initialization settings:
 ------------------------------

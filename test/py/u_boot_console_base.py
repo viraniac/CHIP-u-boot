@@ -17,8 +17,8 @@ import sys
 import u_boot_spawn
 
 # Regexes for text we expect U-Boot to send to the console.
-pattern_u_boot_spl_signon = re.compile('(U-Boot SPL \\d{4}\\.\\d{2}-[^\r\n]*)')
-pattern_u_boot_main_signon = re.compile('(U-Boot \\d{4}\\.\\d{2}-[^\r\n]*)')
+pattern_u_boot_spl_signon = re.compile('(U-Boot SPL \\d{4}\\.\\d{2}[^\r\n]*\\))')
+pattern_u_boot_main_signon = re.compile('(U-Boot \\d{4}\\.\\d{2}[^\r\n]*\\))')
 pattern_stop_autoboot_prompt = re.compile('Hit any key to stop autoboot: ')
 pattern_unknown_command = re.compile('Unknown command \'.*\' - try \'help\'')
 pattern_error_notification = re.compile('## Error: ')
@@ -293,16 +293,17 @@ class ConsoleBase(object):
         if self.p:
             return
         try:
+            self.log.start_section('Starting U-Boot')
             self.at_prompt = False
-            self.log.action('Starting U-Boot')
             self.p = self.get_spawn()
             # Real targets can take a long time to scroll large amounts of
             # text if LCD is enabled. This value may need tweaking in the
             # future, possibly per-test to be optimal. This works for 'help'
             # on board 'seaboard'.
-            self.p.timeout = 30000
+            if not self.config.gdbserver:
+                self.p.timeout = 30000
             self.p.logfile_read = self.logstream
-            if self.config.buildconfig.get('CONFIG_SPL', False) == 'y':
+            if self.config.buildconfig.get('config_spl', False) == 'y':
                 m = self.p.expect([pattern_u_boot_spl_signon] + self.bad_patterns)
                 if m != 0:
                     raise Exception('Bad pattern found on console: ' +
@@ -311,12 +312,7 @@ class ConsoleBase(object):
             if m != 0:
                 raise Exception('Bad pattern found on console: ' +
                                 self.bad_pattern_ids[m - 1])
-            signon = self.p.after
-            build_idx = signon.find(', Build:')
-            if build_idx == -1:
-                self.u_boot_version_string = signon
-            else:
-                self.u_boot_version_string = signon[:build_idx]
+            self.u_boot_version_string = self.p.after
             while True:
                 m = self.p.expect([self.prompt_escaped,
                     pattern_stop_autoboot_prompt] + self.bad_patterns)
@@ -333,6 +329,8 @@ class ConsoleBase(object):
             self.log.error(str(ex))
             self.cleanup_spawn()
             raise
+        finally:
+            self.log.end_section('Starting U-Boot')
 
     def cleanup_spawn(self):
         """Shut down all interaction with the U-Boot instance.

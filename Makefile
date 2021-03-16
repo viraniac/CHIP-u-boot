@@ -5,7 +5,7 @@
 VERSION = 2016
 PATCHLEVEL = 03
 SUBLEVEL =
-EXTRAVERSION = -rc1
+EXTRAVERSION = -rc2
 NAME =
 
 # *DOCUMENTATION*
@@ -562,10 +562,6 @@ else
 KBUILD_CFLAGS	+= -O2
 endif
 
-ifdef BUILD_TAG
-KBUILD_CFLAGS += -DBUILD_TAG='"$(BUILD_TAG)"'
-endif
-
 KBUILD_CFLAGS += $(call cc-option,-fno-stack-protector)
 KBUILD_CFLAGS += $(call cc-option,-fno-delete-null-pointer-checks)
 
@@ -732,7 +728,7 @@ DO_STATIC_RELA =
 endif
 
 # Always append ALL so that arch config.mk's can add custom ones
-ALL-y += u-boot.srec u-boot.bin System.map u-boot.cfg binary_size_check
+ALL-y += u-boot.srec u-boot.bin u-boot.sym System.map u-boot.cfg binary_size_check
 
 ALL-$(CONFIG_ONENAND_U_BOOT) += u-boot-onenand.bin
 ifeq ($(CONFIG_SPL_FSL_PBL),y)
@@ -924,7 +920,7 @@ u-boot.sha1:	u-boot.bin
 u-boot.dis:	u-boot
 		$(OBJDUMP) -d $< > $@
 
-u-boot.cfg:	include/config.h
+u-boot.cfg:	include/config.h FORCE
 	$(call if_changed,cpp_cfg)
 
 ifdef CONFIG_TPL
@@ -945,15 +941,15 @@ lpc32xx-spl.img: spl/u-boot-spl.bin FORCE
 
 OBJCOPYFLAGS_lpc32xx-boot-0.bin = -I binary -O binary --pad-to=$(CONFIG_SPL_PAD_TO)
 
-lpc32xx-boot-0.bin: lpc32xx-spl.img
+lpc32xx-boot-0.bin: lpc32xx-spl.img FORCE
 	$(call if_changed,objcopy)
 
 OBJCOPYFLAGS_lpc32xx-boot-1.bin = -I binary -O binary --pad-to=$(CONFIG_SPL_PAD_TO)
 
-lpc32xx-boot-1.bin: lpc32xx-spl.img
+lpc32xx-boot-1.bin: lpc32xx-spl.img FORCE
 	$(call if_changed,objcopy)
 
-lpc32xx-full.bin: lpc32xx-boot-0.bin lpc32xx-boot-1.bin u-boot.img
+lpc32xx-full.bin: lpc32xx-boot-0.bin lpc32xx-boot-1.bin u-boot.img FORCE
 	$(call if_changed,cat)
 
 CLEAN_FILES += lpc32xx-*
@@ -1056,7 +1052,7 @@ endif
 cmd_ifdtool += $(IFDTOOL) $(IFDTOOL_FLAGS) u-boot.tmp;
 cmd_ifdtool += mv u-boot.tmp $@
 
-u-boot.rom: u-boot-x86-16bit.bin u-boot.bin
+u-boot.rom: u-boot-x86-16bit.bin u-boot.bin FORCE
 	$(call if_changed,ifdtool)
 
 OBJCOPYFLAGS_u-boot-x86-16bit.bin := -O binary -j .start16 -j .resetvec
@@ -1175,12 +1171,17 @@ cmd_smap = \
 	$(CC) $(c_flags) -DSYSTEM_MAP="\"$${smap}\"" \
 		-c $(srctree)/common/system_map.c -o common/system_map.o
 
-u-boot:	$(u-boot-init) $(u-boot-main) u-boot.lds
+u-boot:	$(u-boot-init) $(u-boot-main) u-boot.lds FORCE
 	$(call if_changed,u-boot__)
 ifeq ($(CONFIG_KALLSYMS),y)
 	$(call cmd,smap)
 	$(call cmd,u-boot__) common/system_map.o
 endif
+
+quiet_cmd_sym ?= SYM     $@
+      cmd_sym ?= $(OBJDUMP) -t $< > $@
+u-boot.sym: u-boot FORCE
+	$(call if_changed,sym)
 
 # The actual objects are generated when descending,
 # make sure no implicit rule kicks in

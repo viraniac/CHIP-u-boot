@@ -349,6 +349,38 @@ int arch_cpu_init(void)
 	return 0;
 }
 
+#ifdef CONFIG_ENV_IS_IN_MMC
+__weak int board_mmc_get_env_dev(int devno)
+{
+	return CONFIG_SYS_MMC_ENV_DEV;
+}
+
+int mmc_get_env_dev(void)
+{
+	struct src *src_regs = (struct src *)SRC_BASE_ADDR;
+	u32 soc_sbmr = readl(&src_regs->sbmr1);
+	u32 bootsel;
+	int devno;
+
+	/*
+	 * Refer to
+	 * "i.MX 6Dual/6Quad Applications Processor Reference Manual"
+	 * Chapter "8.5.3.1 Expansion Device eFUSE Configuration"
+	 * i.MX6SL/SX/UL has same layout.
+	 */
+	bootsel = (soc_sbmr & 0x000000FF) >> 6;
+
+	/* If not boot from sd/mmc, use default value */
+	if (bootsel != 1)
+		return CONFIG_SYS_MMC_ENV_DEV;
+
+	/* BOOT_CFG2[3] and BOOT_CFG2[4] */
+	devno = (soc_sbmr & 0x00001800) >> 11;
+
+	return board_mmc_get_env_dev(devno);
+}
+#endif
+
 int board_postclk_init(void)
 {
 	set_ldo_voltage(LDO_SOC, 1175);	/* Set VDDSOC to 1.175V */
@@ -364,15 +396,29 @@ void imx_get_mac_from_fuse(int dev_id, unsigned char *mac)
 	struct fuse_bank4_regs *fuse =
 			(struct fuse_bank4_regs *)bank->fuse_regs;
 
-	u32 value = readl(&fuse->mac_addr_high);
-	mac[0] = (value >> 8);
-	mac[1] = value ;
+	if ((is_cpu_type(MXC_CPU_MX6SX) || is_cpu_type(MXC_CPU_MX6UL)) && 
+		dev_id == 1) {
+		u32 value = readl(&fuse->mac_addr2);
+		mac[0] = value >> 24 ;
+		mac[1] = value >> 16 ;
+		mac[2] = value >> 8 ;
+		mac[3] = value ;
 
-	value = readl(&fuse->mac_addr_low);
-	mac[2] = value >> 24 ;
-	mac[3] = value >> 16 ;
-	mac[4] = value >> 8 ;
-	mac[5] = value ;
+		value = readl(&fuse->mac_addr1);
+		mac[4] = value >> 24 ;
+		mac[5] = value >> 16 ;
+		
+	} else {
+		u32 value = readl(&fuse->mac_addr1);
+		mac[0] = (value >> 8);
+		mac[1] = value ;
+
+		value = readl(&fuse->mac_addr0);
+		mac[2] = value >> 24 ;
+		mac[3] = value >> 16 ;
+		mac[4] = value >> 8 ;
+		mac[5] = value ;
+	}
 
 }
 #endif

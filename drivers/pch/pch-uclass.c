@@ -12,25 +12,15 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-int pch_get_sbase(struct udevice *dev, ulong *sbasep)
+int pch_get_spi_base(struct udevice *dev, ulong *sbasep)
 {
 	struct pch_ops *ops = pch_get_ops(dev);
 
 	*sbasep = 0;
-	if (!ops->get_sbase)
+	if (!ops->get_spi_base)
 		return -ENOSYS;
 
-	return ops->get_sbase(dev, sbasep);
-}
-
-enum pch_version pch_get_version(struct udevice *dev)
-{
-	struct pch_ops *ops = pch_get_ops(dev);
-
-	if (!ops->get_version)
-		return -ENOSYS;
-
-	return ops->get_version(dev);
+	return ops->get_spi_base(dev, sbasep);
 }
 
 int pch_set_spi_protect(struct udevice *dev, bool protect)
@@ -41,6 +31,28 @@ int pch_set_spi_protect(struct udevice *dev, bool protect)
 		return -ENOSYS;
 
 	return ops->set_spi_protect(dev, protect);
+}
+
+int pch_get_gpio_base(struct udevice *dev, u32 *gbasep)
+{
+	struct pch_ops *ops = pch_get_ops(dev);
+
+	*gbasep = 0;
+	if (!ops->get_gpio_base)
+		return -ENOSYS;
+
+	return ops->get_gpio_base(dev, gbasep);
+}
+
+int pch_get_io_base(struct udevice *dev, u32 *iobasep)
+{
+	struct pch_ops *ops = pch_get_ops(dev);
+
+	*iobasep = 0;
+	if (!ops->get_io_base)
+		return -ENOSYS;
+
+	return ops->get_io_base(dev, iobasep);
 }
 
 static int pch_uclass_post_bind(struct udevice *bus)
