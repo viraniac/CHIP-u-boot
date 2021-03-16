@@ -472,9 +472,9 @@ phys_size_t getenv_bootm_size(void)
 
 
 #if defined(CONFIG_ARM) && defined(CONFIG_NR_DRAM_BANKS)
-	return gd->bd->bi_dram[0].size - tmp;
+	return gd->bd->bi_dram[0].size - (tmp - gd->bd->bi_dram[0].start);
 #else
-	return gd->bd->bi_memsize - tmp;
+	return gd->bd->bi_memsize - (tmp - gd->bd->bi_memstart);
 #endif
 }
 
@@ -1113,8 +1113,7 @@ int boot_ramdisk_high(struct lmb *lmb, ulong rd_data, ulong rd_len,
 		if (initrd_high == ~0)
 			initrd_copy_to_ram = 0;
 	} else {
-		/* not set, no restrictions to load high */
-		initrd_high = ~0;
+		initrd_high = getenv_bootm_mapsize() + getenv_bootm_low();
 	}
 
 

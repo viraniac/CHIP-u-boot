@@ -890,15 +890,6 @@ The following options need to be configured:
 		'Sane' compilers will generate smaller code if
 		CONFIG_PRE_CON_BUF_SZ is a power of 2
 
-- Safe printf() functions
-		Define CONFIG_SYS_VSNPRINTF to compile in safe versions of
-		the printf() functions. These are defined in
-		include/vsprintf.h and include snprintf(), vsnprintf() and
-		so on. Code size increase is approximately 300-500 bytes.
-		If this option is not given then these functions will
-		silently discard their buffer size argument - this means
-		you are not getting any overflow checking in this case.
-
 - Boot Delay:	CONFIG_BOOTDELAY - in seconds
 		Delay before automatically booting the default image;
 		set to -1 to disable autoboot.
@@ -1431,6 +1422,17 @@ The following options need to be configured:
 
 			CONFIG_TPM_TIS_I2C_BURST_LIMITATION
 			Define the burst count bytes upper limit
+
+		CONFIG_TPM_ST33ZP24
+		Support for STMicroelectronics TPM devices. Requires DM_TPM support.
+
+			CONFIG_TPM_ST33ZP24_I2C
+			Support for STMicroelectronics ST33ZP24 I2C devices.
+			Requires TPM_ST33ZP24 and I2C.
+
+			CONFIG_TPM_ST33ZP24_SPI
+			Support for STMicroelectronics ST33ZP24 SPI devices.
+			Requires TPM_ST33ZP24 and SPI.
 
 		CONFIG_TPM_ATMEL_TWI
 		Support for Atmel TWI TPM device. Requires I2C support.
@@ -3721,12 +3723,6 @@ Modem Support:
 - RTS/CTS Flow control enable:
 		CONFIG_HWFLOW
 
-- Modem debug support:
-		CONFIG_MODEM_SUPPORT_DEBUG
-
-		Enables debugging stuff (char screen[1024], dbg())
-		for modem support. Useful only with BDI2000.
-
 - Interrupt support (PPC):
 
 		There are common interrupt_init() and timer_interrupt()
@@ -5118,14 +5114,11 @@ If the system board that you have is not listed, then you will need
 to port U-Boot to your hardware platform. To do this, follow these
 steps:
 
-1.  Add a new configuration option for your board to the toplevel
-    "boards.cfg" file, using the existing entries as examples.
-    Follow the instructions there to keep the boards in order.
-2.  Create a new directory to hold your board specific code. Add any
+1.  Create a new directory to hold your board specific code. Add any
     files you need. In your board directory, you will need at least
-    the "Makefile", a "<board>.c", "flash.c" and "u-boot.lds".
-3.  Create a new configuration file "include/configs/<board>.h" for
-    your board
+    the "Makefile" and a "<board>.c".
+2.  Create a new configuration file "include/configs/<board>.h" for
+    your board.
 3.  If you're porting U-Boot to a new CPU, then also create a new
     directory to hold your CPU specific code. Add any files you need.
 4.  Run "make <board>_defconfig" with your new name.

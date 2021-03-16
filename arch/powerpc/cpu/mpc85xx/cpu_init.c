@@ -23,10 +23,17 @@
 #include <asm/fsl_law.h>
 #include <asm/fsl_serdes.h>
 #include <asm/fsl_srio.h>
+#ifdef CONFIG_FSL_CORENET
+#include <asm/fsl_portals.h>
+#include <asm/fsl_liodn.h>
+#endif
 #include <fsl_usb.h>
 #include <hwconfig.h>
 #include <linux/compiler.h>
 #include "mp.h"
+#ifdef CONFIG_CHAIN_OF_TRUST
+#include <fsl_validate.h>
+#endif
 #ifdef CONFIG_FSL_CAAM
 #include <fsl_sec.h>
 #endif
@@ -788,6 +795,13 @@ int cpu_init_r(void)
 		spin_table_compat = 1;
 #endif
 
+#ifdef CONFIG_FSL_CORENET
+	set_liodns();
+#ifdef CONFIG_SYS_DPAA_QBMAN
+	setup_portals();
+#endif
+#endif
+
 	l2cache_init();
 #if defined(CONFIG_RAMBOOT_PBL)
 	disable_cpc_sram();
@@ -1009,3 +1023,14 @@ void cpu_secondary_init_r(void)
 	qe_reset();
 #endif
 }
+
+#ifdef CONFIG_BOARD_LATE_INIT
+int board_late_init(void)
+{
+#ifdef CONFIG_CHAIN_OF_TRUST
+	fsl_setenv_chain_of_trust();
+#endif
+
+	return 0;
+}
+#endif

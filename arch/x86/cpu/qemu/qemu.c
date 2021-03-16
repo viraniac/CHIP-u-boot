@@ -11,8 +11,34 @@
 #include <asm/processor.h>
 #include <asm/arch/device.h>
 #include <asm/arch/qemu.h>
+#include <asm/fw_cfg.h>
 
 static bool i440fx;
+
+static void enable_pm_piix(void)
+{
+	u8 en;
+	u16 cmd;
+
+	/* Set the PM I/O base */
+	x86_pci_write_config32(PIIX_PM, PMBA, CONFIG_ACPI_PM1_BASE | 1);
+
+	/* Enable access to the PM I/O space */
+	cmd = x86_pci_read_config16(PIIX_PM, PCI_COMMAND);
+	cmd |= PCI_COMMAND_IO;
+	x86_pci_write_config16(PIIX_PM, PCI_COMMAND, cmd);
+
+	/* PM I/O Space Enable (PMIOSE) */
+	en = x86_pci_read_config8(PIIX_PM, PMREGMISC);
+	en |= PMIOSE;
+	x86_pci_write_config8(PIIX_PM, PMREGMISC, en);
+}
+
+static void enable_pm_ich9(void)
+{
+	/* Set the PM I/O base */
+	x86_pci_write_config32(ICH9_PM, PMBA, CONFIG_ACPI_PM1_BASE | 1);
+}
 
 static void qemu_chipset_init(void)
 {
@@ -52,11 +78,17 @@ static void qemu_chipset_init(void)
 		xbcs = x86_pci_read_config16(PIIX_ISA, XBCS);
 		xbcs |= APIC_EN;
 		x86_pci_write_config16(PIIX_ISA, XBCS, xbcs);
+
+		enable_pm_piix();
 	} else {
 		/* Configure PCIe ECAM base address */
 		x86_pci_write_config32(PCI_BDF(0, 0, 0), PCIEX_BAR,
 				       CONFIG_PCIE_ECAM_BASE | BAR_EN);
+
+		enable_pm_ich9();
 	}
+
+	qemu_fwcfg_init();
 }
 
 int arch_cpu_init(void)
@@ -91,11 +123,6 @@ int arch_early_init_r(void)
 	qemu_chipset_init();
 
 	return 0;
-}
-
-int arch_misc_init(void)
-{
-	return pirq_init();
 }
 
 #ifdef CONFIG_GENERATE_MP_TABLE

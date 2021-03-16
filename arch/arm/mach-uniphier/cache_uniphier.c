@@ -7,9 +7,16 @@
 #include <common.h>
 #include <linux/io.h>
 #include <asm/armv7.h>
-#include <mach/ssc-regs.h>
+
+#include "ssc-regs.h"
 
 #ifdef CONFIG_UNIPHIER_L2CACHE_ON
+static void uniphier_cache_sync(void)
+{
+	writel(SSCOPE_CM_SYNC, SSCOPE); /* drain internal buffers */
+	readl(SSCOPE); /* need a read back to confirm */
+}
+
 static void uniphier_cache_maint_all(u32 operation)
 {
 	/* try until the command is successfully set */
@@ -24,8 +31,7 @@ static void uniphier_cache_maint_all(u32 operation)
 	/* clear the complete notification flag */
 	writel(SSCOLPQS_EF, SSCOLPQS);
 
-	writel(SSCOPE_CM_SYNC, SSCOPE); /* drain internal buffers */
-	readl(SSCOPE); /* need a read back to confirm */
+	uniphier_cache_sync();
 }
 
 void v7_outer_cache_flush_all(void)
@@ -66,7 +72,9 @@ static void uniphier_cache_maint_range(u32 start, u32 end, u32 operation)
 	 */
 	start = start & ~(SSC_LINE_SIZE - 1);
 
-	if (start == 0 && end >= (u32)(-SSC_LINE_SIZE)) {
+	size = end - start;
+
+	if (unlikely(size >= (u32)(-SSC_LINE_SIZE))) {
 		/* this means cache operation for all range */
 		uniphier_cache_maint_all(operation);
 		return;
@@ -76,7 +84,7 @@ static void uniphier_cache_maint_range(u32 start, u32 end, u32 operation)
 	 * If end address is not aligned to cache-line,
 	 * do cache operation for the last cache-line
 	 */
-	size = (end - start + SSC_LINE_SIZE - 1) & ~(SSC_LINE_SIZE - 1);
+	size = ALIGN(size, SSC_LINE_SIZE);
 
 	while (size) {
 		u32 chunk_size = size > SSC_RANGE_OP_MAX_SIZE ?
@@ -87,8 +95,7 @@ static void uniphier_cache_maint_range(u32 start, u32 end, u32 operation)
 		size -= chunk_size;
 	}
 
-	writel(SSCOPE_CM_SYNC, SSCOPE); /* drain internal buffers */
-	readl(SSCOPE); /* need a read back to confirm */
+	uniphier_cache_sync();
 }
 
 void v7_outer_cache_flush_range(u32 start, u32 end)
@@ -98,12 +105,37 @@ void v7_outer_cache_flush_range(u32 start, u32 end)
 
 void v7_outer_cache_inval_range(u32 start, u32 end)
 {
+	if (start & (SSC_LINE_SIZE - 1)) {
+		start &= ~(SSC_LINE_SIZE - 1);
+		__uniphier_cache_maint_range(start, SSC_LINE_SIZE,
+					     SSCOQM_CM_WB_INV);
+		start += SSC_LINE_SIZE;
+	}
+
+	if (start >= end) {
+		uniphier_cache_sync();
+		return;
+	}
+
+	if (end & (SSC_LINE_SIZE - 1)) {
+		end &= ~(SSC_LINE_SIZE - 1);
+		__uniphier_cache_maint_range(end, SSC_LINE_SIZE,
+					     SSCOQM_CM_WB_INV);
+	}
+
+	if (start >= end) {
+		uniphier_cache_sync();
+		return;
+	}
+
 	uniphier_cache_maint_range(start, end, SSCOQM_CM_INV);
 }
 
 void v7_outer_cache_enable(void)
 {
 	u32 tmp;
+
+	writel(U32_MAX, SSCLPDAWCR);	/* activate all ways */
 	tmp = readl(SSCC);
 	tmp |= SSCC_ON;
 	writel(tmp, SSCC);

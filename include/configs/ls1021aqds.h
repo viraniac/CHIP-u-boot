@@ -371,7 +371,6 @@ unsigned long get_board_ddr_clk(void);
  * Serial Port
  */
 #ifdef CONFIG_LPUART
-#define CONFIG_FSL_LPUART
 #define CONFIG_LPUART_32B_REG
 #else
 #define CONFIG_CONS_INDEX		1
@@ -660,12 +659,12 @@ unsigned long get_board_ddr_clk(void);
 #define CONFIG_MISC_INIT_R
 
 /* Hash command with SHA acceleration supported in hardware */
+#ifdef CONFIG_FSL_CAAM
 #define CONFIG_CMD_HASH
 #define CONFIG_SHA_HW_ACCEL
-
-#ifdef CONFIG_SECURE_BOOT
-#define CONFIG_CMD_BLOB
-#include <asm/fsl_secure_boot.h>
 #endif
+
+#include <asm/fsl_secure_boot.h>
+#define CONFIG_SYS_BOOTM_LEN	(64 << 20) /* Increase max gunzip size */
 
 #endif

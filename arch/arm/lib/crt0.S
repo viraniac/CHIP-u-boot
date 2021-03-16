@@ -83,8 +83,11 @@ ENTRY(_main)
 	bic	sp, sp, #7	/* 8-byte alignment for ABI compliance */
 #endif
 	mov	r0, sp
-	bl	board_init_f_mem
+	bl	board_init_f_alloc_reserve
 	mov	sp, r0
+	/* set up gd here, outside any C code */
+	mov	r9, r0
+	bl	board_init_f_init_reserve
 
 	mov	r0, #0
 	bl	board_init_f
@@ -133,6 +136,7 @@ here:
 	bl	spl_relocate_stack_gd
 	cmp	r0, #0
 	movne	sp, r0
+	movne	r9, r0
 # endif
 	ldr	r0, =__bss_start	/* this is auto-relocated! */
 

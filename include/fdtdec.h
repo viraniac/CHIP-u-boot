@@ -151,7 +151,6 @@ enum fdt_compat_id {
 	COMPAT_GENERIC_SPI_FLASH,	/* Generic SPI Flash chip */
 	COMPAT_MAXIM_98095_CODEC,	/* MAX98095 Codec */
 	COMPAT_SAMSUNG_EXYNOS5_I2C,	/* Exynos5 High Speed I2C Controller */
-	COMPAT_SANDBOX_LCD_SDL,		/* Sandbox LCD emulation with SDL */
 	COMPAT_SAMSUNG_EXYNOS_SYSMMU,	/* Exynos sysmmu */
 	COMPAT_INTEL_MICROCODE,		/* Intel microcode update */
 	COMPAT_MEMORY_SPD,		/* Memory SPD information */
@@ -164,13 +163,13 @@ enum fdt_compat_id {
 	COMPAT_INTEL_X86_PINCTRL,	/* Intel ICH7/9 pin control */
 	COMPAT_SOCIONEXT_XHCI,		/* Socionext UniPhier xHCI */
 	COMPAT_INTEL_PCH,		/* Intel PCH */
-	COMPAT_INTEL_IRQ_ROUTER,	/* Intel Interrupt Router */
 	COMPAT_ALTERA_SOCFPGA_DWMAC,	/* SoCFPGA Ethernet controller */
 	COMPAT_ALTERA_SOCFPGA_DWMMC,	/* SoCFPGA DWMMC controller */
 	COMPAT_ALTERA_SOCFPGA_DWC2USB,	/* SoCFPGA DWC2 USB controller */
 	COMPAT_INTEL_BAYTRAIL_FSP,	/* Intel Bay Trail FSP */
 	COMPAT_INTEL_BAYTRAIL_FSP_MDP,	/* Intel FSP memory-down params */
 	COMPAT_SUNXI_NAND,		/* SUNXI NAND controller */
+	COMPAT_INTEL_IVYBRIDGE_FSP,	/* Intel Ivy Bridge FSP */
 
 	COMPAT_COUNT,
 };
@@ -446,32 +445,15 @@ int fdtdec_get_pci_vendev(const void *blob, int node,
 
 /**
  * Look at the pci address of a device node that represents a PCI device
- * and parse the bus, device and function number from it. For some cases
- * like the bus number encoded in reg property is not correct after pci
- * enumeration, this function looks through the node's compatible strings
- * to get these numbers extracted instead.
- *
- * @param blob		FDT blob
- * @param node		node to examine
- * @param addr		pci address in the form of fdt_pci_addr
- * @param bdf		returns bus, device, function triplet
- * @return 0 if ok, negative on error
- */
-int fdtdec_get_pci_bdf(const void *blob, int node,
-		struct fdt_pci_addr *addr, pci_dev_t *bdf);
-
-/**
- * Look at the pci address of a device node that represents a PCI device
  * and return base address of the pci device's registers.
  *
- * @param blob		FDT blob
- * @param node		node to examine
+ * @param dev		device to examine
  * @param addr		pci address in the form of fdt_pci_addr
  * @param bar		returns base address of the pci device's registers
  * @return 0 if ok, negative on error
  */
-int fdtdec_get_pci_bar32(const void *blob, int node,
-		struct fdt_pci_addr *addr, u32 *bar);
+int fdtdec_get_pci_bar32(struct udevice *dev, struct fdt_pci_addr *addr,
+			 u32 *bar);
 
 /**
  * Look up a 32-bit integer property in a node and return it. The property

@@ -15,9 +15,6 @@
 #define CONFIG_GICV3
 #define CONFIG_FSL_TZPC_BP147
 
-/* Errata fixes */
-#define CONFIG_ARM_ERRATA_828024
-#define CONFIG_ARM_ERRATA_826974
 
 #include <asm/arch/ls2080a_stream_id.h>
 #include <asm/arch/config.h>
@@ -196,7 +193,7 @@ unsigned long long get_qixis_addr(void);
  */
 #if defined(CONFIG_FSL_MC_ENET) || defined(CONFIG_FSL_DEBUG_SERVER)
 #define CONFIG_SYS_DEBUG_SERVER_DRAM_BLOCK_MIN_SIZE	(254UL * 1024 * 1024)
-#define CONFIG_SYS_LS_MC_DRAM_BLOCK_MIN_SIZE		(256UL * 1024 * 1024)
+#define CONFIG_SYS_LS_MC_DRAM_BLOCK_MIN_SIZE		(512UL * 1024 * 1024)
 #define CONFIG_SYS_MC_RSV_MEM_ALIGN			(512UL * 1024 * 1024)
 #endif
 

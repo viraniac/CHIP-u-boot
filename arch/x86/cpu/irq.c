@@ -5,6 +5,7 @@
  */
 
 #include <common.h>
+#include <dm.h>
 #include <errno.h>
 #include <fdtdec.h>
 #include <malloc.h>
@@ -82,12 +83,7 @@ static inline void fill_irq_info(struct irq_info *slot, int bus, int device,
 	slot->irq[pin - 1].bitmap = irq_router.irq_mask;
 }
 
-__weak void cpu_irq_init(void)
-{
-	return;
-}
-
-static int create_pirq_routing_table(void)
+static int create_pirq_routing_table(struct udevice *dev)
 {
 	const void *blob = gd->fdt_blob;
 	struct fdt_pci_addr addr;
@@ -97,16 +93,13 @@ static int create_pirq_routing_table(void)
 	struct irq_routing_table *rt;
 	struct irq_info *slot, *slot_base;
 	int irq_entries = 0;
+	int parent;
 	int i;
 	int ret;
 
-	node = fdtdec_next_compatible(blob, 0, COMPAT_INTEL_IRQ_ROUTER);
-	if (node < 0) {
-		debug("%s: Cannot find irq router node\n", __func__);
-		return -EINVAL;
-	}
-
-	ret = fdtdec_get_pci_addr(blob, node, FDT_PCI_SPACE_CONFIG,
+	node = dev->of_offset;
+	parent = dev->parent->of_offset;
+	ret = fdtdec_get_pci_addr(blob, parent, FDT_PCI_SPACE_CONFIG,
 				  "reg", &addr);
 	if (ret)
 		return ret;
@@ -225,13 +218,11 @@ static int create_pirq_routing_table(void)
 	return 0;
 }
 
-int pirq_init(void)
+int irq_router_common_init(struct udevice *dev)
 {
 	int ret;
 
-	cpu_irq_init();
-
-	ret = create_pirq_routing_table();
+	ret = create_pirq_routing_table(dev);
 	if (ret) {
 		debug("Failed to create pirq routing table\n");
 		return ret;
@@ -243,6 +234,11 @@ int pirq_init(void)
 	return 0;
 }
 
+int irq_router_probe(struct udevice *dev)
+{
+	return irq_router_common_init(dev);
+}
+
 u32 write_pirq_routing_table(u32 addr)
 {
 	if (!pirq_routing_table)
@@ -250,3 +246,20 @@ u32 write_pirq_routing_table(u32 addr)
 
 	return copy_pirq_routing_table(addr, pirq_routing_table);
 }
+
+static const struct udevice_id irq_router_ids[] = {
+	{ .compatible = "intel,irq-router" },
+	{ }
+};
+
+U_BOOT_DRIVER(irq_router_drv) = {
+	.name		= "intel_irq",
+	.id		= UCLASS_IRQ,
+	.of_match	= irq_router_ids,
+	.probe		= irq_router_probe,
+};
+
+UCLASS_DRIVER(irq) = {
+	.id		= UCLASS_IRQ,
+	.name		= "irq",
+};

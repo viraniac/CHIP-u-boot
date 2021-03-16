@@ -70,6 +70,7 @@ int gunzip(void *dst, int dstlen, unsigned char *src, unsigned long *lenp)
 	return zunzip(dst, dstlen, src, lenp, 1, i);
 }
 
+#ifdef CONFIG_CMD_UNZIP
 __weak
 void gzwrite_progress_init(u64 expectedsize)
 {
@@ -231,8 +232,7 @@ int gzwrite(unsigned char *src, int len,
 			gzwrite_progress(iteration++,
 					 totalfilled,
 					 szexpected);
-			blocks_written = dev->block_write(dev->dev,
-							  outblock,
+			blocks_written = dev->block_write(dev, outblock,
 							  writeblocks,
 							  writebuf);
 			outblock += blocks_written;
@@ -259,6 +259,7 @@ out:
 
 	return r;
 }
+#endif
 
 /*
  * Uncompress blocks compressed with zlib without headers

@@ -3,9 +3,9 @@
 #
 
 VERSION = 2016
-PATCHLEVEL = 01
+PATCHLEVEL = 03
 SUBLEVEL =
-EXTRAVERSION =
+EXTRAVERSION = -rc1
 NAME =
 
 # *DOCUMENTATION*
@@ -591,12 +591,6 @@ endif
 # Prohibit date/time macros, which would make the build non-deterministic
 KBUILD_CFLAGS   += $(call cc-option,-Werror=date-time)
 
-ifneq ($(CONFIG_SYS_TEXT_BASE),)
-KBUILD_CPPFLAGS += -DCONFIG_SYS_TEXT_BASE=$(CONFIG_SYS_TEXT_BASE)
-endif
-
-export CONFIG_SYS_TEXT_BASE
-
 include scripts/Makefile.extrawarn
 
 # Add user supplied CPPFLAGS, AFLAGS and CFLAGS as the last assignments
@@ -667,6 +661,7 @@ libs-y += drivers/usb/musb/
 libs-y += drivers/usb/musb-new/
 libs-y += drivers/usb/phy/
 libs-y += drivers/usb/ulpi/
+libs-y += cmd/
 libs-y += common/
 libs-$(CONFIG_API) += api/
 libs-$(CONFIG_HAS_POST) += post/
@@ -752,7 +747,7 @@ endif
 ALL-$(CONFIG_SPL) += spl/u-boot-spl.bin
 ALL-$(CONFIG_SPL_FRAMEWORK) += u-boot.img
 ALL-$(CONFIG_TPL) += tpl/u-boot-tpl.bin
-ALL-$(CONFIG_OF_SEPARATE) += u-boot.dtb u-boot-dtb.bin
+ALL-$(CONFIG_OF_SEPARATE) += u-boot.dtb
 ifeq ($(CONFIG_SPL_FRAMEWORK),y)
 ALL-$(CONFIG_OF_SEPARATE) += u-boot-dtb.img
 endif
@@ -769,14 +764,9 @@ ALL-$(CONFIG_X86_RESET_VECTOR) += u-boot.rom
 endif
 
 # enable combined SPL/u-boot/dtb rules for tegra
-ifneq ($(CONFIG_TEGRA),)
-ifeq ($(CONFIG_SPL),y)
-ifeq ($(CONFIG_OF_SEPARATE),y)
-ALL-y += u-boot-dtb-tegra.bin
-else
-ALL-y += u-boot-nodtb-tegra.bin
-endif
-endif
+ifeq ($(CONFIG_TEGRA)$(CONFIG_SPL),yy)
+ALL-y += u-boot-tegra.bin u-boot-nodtb-tegra.bin
+ALL-$(CONFIG_OF_SEPARATE) += u-boot-dtb-tegra.bin
 endif
 
 # Add optional build target if defined in board/cpu/soc headers
@@ -833,14 +823,22 @@ PHONY += dtbs
 dtbs dts/dt.dtb: checkdtc u-boot
 	$(Q)$(MAKE) $(build)=dts dtbs
 
-u-boot-dtb.bin: u-boot.bin dts/dt.dtb FORCE
+quiet_cmd_copy = COPY    $@
+      cmd_copy = cp $< $@
+
+ifeq ($(CONFIG_OF_SEPARATE),y)
+u-boot-dtb.bin: u-boot-nodtb.bin dts/dt.dtb FORCE
 	$(call if_changed,cat)
+
+u-boot.bin: u-boot-dtb.bin FORCE
+	$(call if_changed,copy)
+else
+u-boot.bin: u-boot-nodtb.bin FORCE
+	$(call if_changed,copy)
+endif
 
 %.imx: %.bin
 	$(Q)$(MAKE) $(build)=arch/arm/imx-common $@
-
-quiet_cmd_copy = COPY    $@
-      cmd_copy = cp $< $@
 
 u-boot.dtb: dts/dt.dtb
 	$(call cmd,copy)
@@ -852,11 +850,11 @@ OBJCOPYFLAGS_u-boot.srec := -O srec
 u-boot.hex u-boot.srec: u-boot FORCE
 	$(call if_changed,objcopy)
 
-OBJCOPYFLAGS_u-boot.bin := -O binary \
+OBJCOPYFLAGS_u-boot-nodtb.bin := -O binary \
 		$(if $(CONFIG_X86_RESET_VECTOR),-R .start16 -R .resetvec)
 
-binary_size_check: u-boot.bin FORCE
-	@file_size=$(shell wc -c u-boot.bin | awk '{print $$1}') ; \
+binary_size_check: u-boot-nodtb.bin FORCE
+	@file_size=$(shell wc -c u-boot-nodtb.bin | awk '{print $$1}') ; \
 	map_size=$(shell cat u-boot.map | \
 		awk '/_image_copy_start/ {start = $$1} /_image_binary_end/ {end = $$1} END {if (start != "" && end != "") print "ibase=16; " toupper(end) " - " toupper(start)}' \
 		| sed 's/0X//g' \
@@ -864,12 +862,12 @@ binary_size_check: u-boot.bin FORCE
 	if [ "" != "$$map_size" ]; then \
 		if test $$map_size -ne $$file_size; then \
 			echo "u-boot.map shows a binary size of $$map_size" >&2 ; \
-			echo "  but u-boot.bin shows $$file_size" >&2 ; \
+			echo "  but u-boot-nodtb.bin shows $$file_size" >&2 ; \
 			exit 1; \
 		fi \
 	fi
 
-u-boot.bin: u-boot FORCE
+u-boot-nodtb.bin: u-boot FORCE
 	$(call if_changed,objcopy)
 	$(call DO_STATIC_RELA,$<,$@,$(CONFIG_SYS_TEXT_BASE))
 	$(BOARD_SIZE_CHECK)
@@ -903,6 +901,8 @@ MKIMAGEFLAGS_u-boot.img = -A $(ARCH) -T firmware -C none -O u-boot \
 	-a $(CONFIG_SYS_TEXT_BASE) -e $(CONFIG_SYS_UBOOT_START) \
 	-n "U-Boot $(UBOOTRELEASE) for $(BOARD) board"
 
+MKIMAGEFLAGS_u-boot-dtb.img = $(MKIMAGEFLAGS_u-boot.img)
+
 MKIMAGEFLAGS_u-boot.kwb = -n $(srctree)/$(CONFIG_SYS_KWD_CONFIG:"%"=%) \
 	-T kwbimage -a $(CONFIG_SYS_TEXT_BASE) -e $(CONFIG_SYS_TEXT_BASE)
 
@@ -912,25 +912,10 @@ MKIMAGEFLAGS_u-boot-spl.kwb = -n $(srctree)/$(CONFIG_SYS_KWD_CONFIG:"%"=%) \
 MKIMAGEFLAGS_u-boot.pbl = -n $(srctree)/$(CONFIG_SYS_FSL_PBL_RCW:"%"=%) \
 		-R $(srctree)/$(CONFIG_SYS_FSL_PBL_PBI:"%"=%) -T pblimage
 
-u-boot.img u-boot.kwb u-boot.pbl: u-boot.bin FORCE
+u-boot-dtb.img u-boot.img u-boot.kwb u-boot.pbl: u-boot.bin FORCE
 	$(call if_changed,mkimage)
 
-# If the kwboot xmodem protocol is used, to boot U-Boot on the MVEBU
-# SoC's, the SPL U-Boot returns to the BootROM after it completes
-# the SDRAM setup. The BootROM expects no U-Boot header in the main
-# U-Boot image. So we need to combine SPL and u-boot.bin instead of
-# u-boot.img in this case.
-ifdef CONFIG_MVEBU_BOOTROM_UARTBOOT
-u-boot-spl.kwb: u-boot-dtb.bin spl/u-boot-spl.bin FORCE
-	$(call if_changed,mkimage)
-else
-u-boot-spl.kwb: u-boot-dtb.img spl/u-boot-spl.bin FORCE
-	$(call if_changed,mkimage)
-endif
-
-MKIMAGEFLAGS_u-boot-dtb.img = $(MKIMAGEFLAGS_u-boot.img)
-
-u-boot-dtb.img: u-boot-dtb.bin FORCE
+u-boot-spl.kwb: u-boot.img spl/u-boot-spl.bin FORCE
 	$(call if_changed,mkimage)
 
 u-boot.sha1:	u-boot.bin
@@ -1022,10 +1007,10 @@ u-boot.spr: spl/u-boot-spl.img u-boot.img FORCE
 
 ifneq ($(CONFIG_ARCH_SOCFPGA),)
 quiet_cmd_socboot = SOCBOOT $@
-cmd_socboot = cat	spl/u-boot-spl-dtb.sfp spl/u-boot-spl-dtb.sfp	\
-			spl/u-boot-spl-dtb.sfp spl/u-boot-spl-dtb.sfp	\
-			u-boot-dtb.img > $@ || rm -f $@
-u-boot-with-spl-dtb.sfp: spl/u-boot-spl-dtb.sfp u-boot-dtb.img FORCE
+cmd_socboot = cat	spl/u-boot-spl.sfp spl/u-boot-spl.sfp	\
+			spl/u-boot-spl.sfp spl/u-boot-spl.sfp	\
+			u-boot.img > $@ || rm -f $@
+u-boot-with-spl.sfp: spl/u-boot-spl.sfp u-boot.img FORCE
 	$(call if_changed,socboot)
 endif
 
@@ -1038,7 +1023,7 @@ rom: u-boot.rom FORCE
 IFDTOOL=$(objtree)/tools/ifdtool
 IFDTOOL_FLAGS  = -f 0:$(objtree)/u-boot.dtb
 IFDTOOL_FLAGS += -m 0x$(shell $(NM) u-boot |grep _dt_ucode_base_size |cut -d' ' -f1)
-IFDTOOL_FLAGS += -U $(CONFIG_SYS_TEXT_BASE):$(objtree)/u-boot.bin
+IFDTOOL_FLAGS += -U $(CONFIG_SYS_TEXT_BASE):$(objtree)/u-boot-nodtb.bin
 IFDTOOL_FLAGS += -w $(CONFIG_SYS_X86_START16):$(objtree)/u-boot-x86-16bit.bin
 IFDTOOL_FLAGS += -C
 
@@ -1071,7 +1056,7 @@ endif
 cmd_ifdtool += $(IFDTOOL) $(IFDTOOL_FLAGS) u-boot.tmp;
 cmd_ifdtool += mv u-boot.tmp $@
 
-u-boot.rom: u-boot-x86-16bit.bin u-boot-dtb.bin
+u-boot.rom: u-boot-x86-16bit.bin u-boot.bin
 	$(call if_changed,ifdtool)
 
 OBJCOPYFLAGS_u-boot-x86-16bit.bin := -O binary -j .start16 -j .resetvec
@@ -1082,8 +1067,7 @@ endif
 ifneq ($(CONFIG_SUNXI),)
 OBJCOPYFLAGS_u-boot-sunxi-with-spl.bin = -I binary -O binary \
 				   --pad-to=$(CONFIG_SPL_PAD_TO) --gap-fill=0xff
-u-boot-sunxi-with-spl.bin: spl/sunxi-spl.bin \
-			u-boot$(if $(CONFIG_OF_CONTROL),-dtb,).img FORCE
+u-boot-sunxi-with-spl.bin: spl/sunxi-spl.bin u-boot.img FORCE
 	$(call if_changed,pad_cat)
 
 OBJCOPYFLAGS_u-boot-sunxi-padded.bin = -I binary -O binary --pad-to=0xc0000 --gap-fill=0
@@ -1093,20 +1077,22 @@ endif
 
 ifneq ($(CONFIG_TEGRA),)
 OBJCOPYFLAGS_u-boot-nodtb-tegra.bin = -O binary --pad-to=$(CONFIG_SYS_TEXT_BASE)
-u-boot-nodtb-tegra.bin: spl/u-boot-spl u-boot.bin FORCE
+u-boot-nodtb-tegra.bin: spl/u-boot-spl u-boot-nodtb.bin FORCE
 	$(call if_changed,pad_cat)
 
-ifeq ($(CONFIG_OF_SEPARATE),y)
-u-boot-dtb-tegra.bin: u-boot-nodtb-tegra.bin dts/dt.dtb FORCE
-	$(call if_changed,cat)
-endif
+OBJCOPYFLAGS_u-boot-tegra.bin = -O binary --pad-to=$(CONFIG_SYS_TEXT_BASE)
+u-boot-tegra.bin: spl/u-boot-spl u-boot.bin FORCE
+	$(call if_changed,pad_cat)
+
+u-boot-dtb-tegra.bin: u-boot-tegra.bin FORCE
+	$(call if_changed,copy)
 endif
 
 OBJCOPYFLAGS_u-boot-app.efi := $(OBJCOPYFLAGS_EFI)
 u-boot-app.efi: u-boot FORCE
 	$(call if_changed,zobjcopy)
 
-u-boot-dtb.bin.o: u-boot-dtb.bin FORCE
+u-boot.bin.o: u-boot.bin FORCE
 	$(call if_changed,efipayload)
 
 u-boot-payload.lds: $(LDSCRIPT_EFI) FORCE
@@ -1116,10 +1102,10 @@ u-boot-payload.lds: $(LDSCRIPT_EFI) FORCE
 quiet_cmd_u-boot_payload ?= LD      $@
       cmd_u-boot_payload ?= $(LD) $(LDFLAGS_EFI_PAYLOAD) -o $@ \
       -T u-boot-payload.lds arch/x86/cpu/call32.o \
-      lib/efi/efi.o lib/efi/efi_stub.o u-boot-dtb.bin.o \
+      lib/efi/efi.o lib/efi/efi_stub.o u-boot.bin.o \
       $(addprefix arch/$(ARCH)/lib/efi/,$(EFISTUB))
 
-u-boot-payload: u-boot-dtb.bin.o u-boot-payload.lds FORCE
+u-boot-payload: u-boot.bin.o u-boot-payload.lds FORCE
 	$(call if_changed,u-boot_payload)
 
 OBJCOPYFLAGS_u-boot-payload.efi := $(OBJCOPYFLAGS_EFI)
@@ -1140,11 +1126,7 @@ spl/u-boot-spl.pbl: spl/u-boot-spl.bin FORCE
 	$(call if_changed,mkimage)
 
 ifeq ($(ARCH),arm)
-ifdef CONFIG_OF_CONTROL
-UBOOT_BINLOAD := u-boot-dtb.img
-else
 UBOOT_BINLOAD := u-boot.img
-endif
 else
 UBOOT_BINLOAD := u-boot.bin
 endif
@@ -1339,7 +1321,7 @@ spl/sunxi-spl.bin: spl/u-boot-spl
 spl/sunxi-spl-with-ecc.bin: spl/sunxi-spl.bin
 	@:
 
-spl/u-boot-spl-dtb.sfp: spl/u-boot-spl
+spl/u-boot-spl.sfp: spl/u-boot-spl
 	@:
 
 spl/boot.bin: spl/u-boot-spl

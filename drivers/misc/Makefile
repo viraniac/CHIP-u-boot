@@ -10,11 +10,13 @@ obj-$(CONFIG_ALI152X) += ali512x.o
 obj-$(CONFIG_ALTERA_SYSID) += altera_sysid.o
 obj-$(CONFIG_DS4510)  += ds4510.o
 obj-$(CONFIG_CBMEM_CONSOLE) += cbmem_console.o
+ifndef CONFIG_SPL_BUILD
 obj-$(CONFIG_CROS_EC) += cros_ec.o
 obj-$(CONFIG_CROS_EC_LPC) += cros_ec_lpc.o
 obj-$(CONFIG_CROS_EC_I2C) += cros_ec_i2c.o
 obj-$(CONFIG_CROS_EC_SANDBOX) += cros_ec_sandbox.o
 obj-$(CONFIG_CROS_EC_SPI) += cros_ec_spi.o
+endif
 obj-$(CONFIG_FSL_DEBUG_SERVER) += fsl_debug_server.o
 obj-$(CONFIG_FSL_IIM) += fsl_iim.o
 obj-$(CONFIG_GPIO_LED) += gpio_led.o
@@ -24,6 +26,7 @@ obj-$(CONFIG_MXC_OCOTP) += mxc_ocotp.o
 obj-$(CONFIG_MXS_OCOTP) += mxs_ocotp.o
 obj-$(CONFIG_NS87308) += ns87308.o
 obj-$(CONFIG_PDSP188x) += pdsp188x.o
+obj-$(CONFIG_$(SPL_)PWRSEQ) += pwrseq-uclass.o
 obj-$(CONFIG_SANDBOX) += reset_sandbox.o
 ifdef CONFIG_DM_I2C
 obj-$(CONFIG_SANDBOX) += i2c_eeprom_emul.o
@@ -38,3 +41,4 @@ obj-$(CONFIG_FSL_SEC_MON) += fsl_sec_mon.o
 obj-$(CONFIG_PCA9551_LED) += pca9551_led.o
 obj-$(CONFIG_RESET) += reset-uclass.o
 obj-$(CONFIG_FSL_DEVICE_DISABLE) += fsl_devdis.o
+obj-$(CONFIG_WINBOND_W83627) += winbond_w83627.o

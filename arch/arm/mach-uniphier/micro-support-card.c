@@ -7,7 +7,8 @@
 #include <common.h>
 #include <linux/ctype.h>
 #include <linux/io.h>
-#include <mach/micro-support-card.h>
+
+#include "micro-support-card.h"
 
 #define MICRO_SUPPORT_CARD_BASE		0x43f00000
 #define SMC911X_BASE			((MICRO_SUPPORT_CARD_BASE) + 0x00000)
@@ -70,7 +71,6 @@ int board_eth_init(bd_t *bis)
 #if !defined(CONFIG_SYS_NO_FLASH)
 
 #include <mtd/cfi_flash.h>
-#include <mach/sbc-regs.h>
 
 struct memory_bank {
 	phys_addr_t base;

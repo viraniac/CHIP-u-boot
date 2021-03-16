@@ -22,6 +22,7 @@ dtb-$(CONFIG_EXYNOS5) += exynos5250-arndale.dtb \
 dtb-$(CONFIG_ARCH_ROCKCHIP) += \
 	rk3288-firefly.dtb \
 	rk3288-jerry.dtb \
+	rk3288-rock2-square.dtb \
 	rk3036-sdk.dtb
 dtb-$(CONFIG_TEGRA) += tegra20-harmony.dtb \
 	tegra20-medcom-wide.dtb \
@@ -48,8 +49,12 @@ dtb-$(CONFIG_TEGRA) += tegra20-harmony.dtb \
 	tegra210-p2571.dtb
 
 dtb-$(CONFIG_ARCH_MVEBU) +=			\
+	armada-388-clearfog.dtb			\
 	armada-388-gp.dtb			\
-	armada-xp-gp.dtb
+	armada-xp-gp.dtb			\
+	armada-xp-maxbcm.dtb			\
+	armada-xp-synology-ds414.dtb		\
+	armada-xp-theadorable.dtb
 
 dtb-$(CONFIG_ARCH_UNIPHIER) += \
 	uniphier-ph1-ld4-ref.dtb \
@@ -74,6 +79,7 @@ dtb-$(CONFIG_ARCH_ZYNQMP) += \
 	zynqmp-ep108.dtb
 dtb-$(CONFIG_AM33XX) += am335x-boneblack.dtb am335x-evm.dtb
 dtb-$(CONFIG_AM43XX) += am437x-gp-evm.dtb am437x-sk-evm.dtb
+dtb-$(CONFIG_THUNDERX) += thunderx-88xx.dtb
 
 dtb-$(CONFIG_ARCH_SOCFPGA) +=				\
 	socfpga_arria5_socdk.dtb			\
@@ -89,10 +95,11 @@ dtb-$(CONFIG_TARGET_BEAGLE_X15) += am57xx-beagle-x15.dtb
 dtb-$(CONFIG_TARGET_STV0991) += stv0991.dtb
 
 dtb-$(CONFIG_LS102XA) += ls1021a-qds.dtb \
-	ls1021a-twr.dtb
+	ls1021a-twr-duart.dtb ls1021a-twr-lpuart.dtb
 dtb-$(CONFIG_FSL_LSCH3) += fsl-ls2080a-qds.dtb \
 	fsl-ls2080a-rdb.dtb
-dtb-$(CONFIG_FSL_LSCH2) += fsl-ls1043a-qds.dtb \
+dtb-$(CONFIG_FSL_LSCH2) += fsl-ls1043a-qds-duart.dtb \
+	fsl-ls1043a-qds-lpuart.dtb \
 	fsl-ls1043a-rdb.dtb
 
 dtb-$(CONFIG_MACH_SUN4I) += \
@@ -178,7 +185,8 @@ dtb-$(CONFIG_MACH_SUN8I_A33) += \
 	sun8i-a33-q8-tablet.dtb \
 	sun8i-a33-sinlinx-sina33.dtb
 dtb-$(CONFIG_MACH_SUN8I_A83T) += \
-	sun8i-a83t-allwinner-h8homlet-v2.dtb
+	sun8i-a83t-allwinner-h8homlet-v2.dtb \
+	sun8i-a83t-sinovoip-bpi-m3.dtb
 dtb-$(CONFIG_MACH_SUN8I_H3) += \
 	sun8i-h3-orangepi-pc.dtb \
 	sun8i-h3-orangepi-plus.dtb

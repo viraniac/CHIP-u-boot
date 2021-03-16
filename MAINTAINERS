@@ -93,12 +93,14 @@ F:	arch/arm/include/asm/arch-mx*/
 F:	arch/arm/include/asm/arch-vf610/
 F:	arch/arm/include/asm/imx-common/
 
-ARM MARVELL KIRKWOOD
+ARM MARVELL KIRKWOOD ARMADA-XP ARMADA-38X
 M:	Prafulla Wadaskar <prafulla@marvell.com>
 M:	Luka Perkov <luka.perkov@sartura.hr>
+M:	Stefan Roese <sr@denx.de>
 S:	Maintained
 T:	git git://git.denx.de/u-boot-marvell.git
 F:	arch/arm/mach-kirkwood/
+F:	arch/arm/mach-mvebu/
 
 ARM MARVELL PXA
 M:	Marek Vasut <marex@denx.de>
@@ -106,6 +108,12 @@ S:	Maintained
 T:	git git://git.denx.de/u-boot-pxa.git
 F:	arch/arm/cpu/pxa/
 F:	arch/arm/include/asm/arch-pxa/
+
+ARM ROCKCHIP
+M:	Simon Glass <sjg@chromium.org>
+S:	Maintained
+T:	git git://git.denx.de/u-boot-rockchip.git
+F:	arch/arm/mach-rockchip/
 
 ARM SAMSUNG
 M:	Minkyu Kang <mk7.kang@samsung.com>

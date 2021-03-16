@@ -5,6 +5,7 @@
 
 #ifndef USE_HOSTCC
 #include <common.h>
+#include <dm.h>
 #include <errno.h>
 #include <serial.h>
 #include <libfdt.h>
@@ -55,7 +56,6 @@ static const char * const compat_names[COMPAT_COUNT] = {
 	COMPAT(GENERIC_SPI_FLASH, "spi-flash"),
 	COMPAT(MAXIM_98095_CODEC, "maxim,max98095-codec"),
 	COMPAT(SAMSUNG_EXYNOS5_I2C, "samsung,exynos5-hsi2c"),
-	COMPAT(SANDBOX_LCD_SDL, "sandbox,lcd-sdl"),
 	COMPAT(SAMSUNG_EXYNOS_SYSMMU, "samsung,sysmmu-v3.3"),
 	COMPAT(INTEL_MICROCODE, "intel,microcode"),
 	COMPAT(MEMORY_SPD, "memory-spd"),
@@ -68,13 +68,13 @@ static const char * const compat_names[COMPAT_COUNT] = {
 	COMPAT(INTEL_X86_PINCTRL, "intel,x86-pinctrl"),
 	COMPAT(SOCIONEXT_XHCI, "socionext,uniphier-xhci"),
 	COMPAT(COMPAT_INTEL_PCH, "intel,bd82x6x"),
-	COMPAT(COMPAT_INTEL_IRQ_ROUTER, "intel,irq-router"),
 	COMPAT(ALTERA_SOCFPGA_DWMAC, "altr,socfpga-stmmac"),
 	COMPAT(ALTERA_SOCFPGA_DWMMC, "altr,socfpga-dw-mshc"),
 	COMPAT(ALTERA_SOCFPGA_DWC2USB, "snps,dwc2"),
 	COMPAT(COMPAT_INTEL_BAYTRAIL_FSP, "intel,baytrail-fsp"),
 	COMPAT(COMPAT_INTEL_BAYTRAIL_FSP_MDP, "intel,baytrail-fsp-mdp"),
 	COMPAT(COMPAT_SUNXI_NAND, "allwinner,sun4i-a10-nand"),
+	COMPAT(COMPAT_INTEL_IVYBRIDGE_FSP, "intel,ivybridge-fsp"),
 };
 
 const char *fdtdec_get_compatible(enum fdt_compat_id id)
@@ -191,7 +191,7 @@ fdt_addr_t fdtdec_get_addr(const void *blob, int node,
 	return fdtdec_get_addr_size(blob, node, prop_name, NULL);
 }
 
-#ifdef CONFIG_PCI
+#if defined(CONFIG_PCI) && defined(CONFIG_DM_PCI)
 int fdtdec_get_pci_addr(const void *blob, int node, enum fdt_pci_space type,
 		const char *prop_name, struct fdt_pci_addr *addr)
 {
@@ -284,58 +284,10 @@ int fdtdec_get_pci_vendev(const void *blob, int node, u16 *vendor, u16 *device)
 	return -ENOENT;
 }
 
-int fdtdec_get_pci_bdf(const void *blob, int node,
-		struct fdt_pci_addr *addr, pci_dev_t *bdf)
+int fdtdec_get_pci_bar32(struct udevice *dev, struct fdt_pci_addr *addr,
+			 u32 *bar)
 {
-	u16 dt_vendor, dt_device, vendor, device;
-	int ret;
-
-	/* get vendor id & device id from the compatible string */
-	ret = fdtdec_get_pci_vendev(blob, node, &dt_vendor, &dt_device);
-	if (ret)
-		return ret;
-
-	/* extract the bdf from fdt_pci_addr */
-	*bdf = addr->phys_hi & 0xffff00;
-
-	/* read vendor id & device id based on bdf */
-	pci_read_config_word(*bdf, PCI_VENDOR_ID, &vendor);
-	pci_read_config_word(*bdf, PCI_DEVICE_ID, &device);
-
-	/*
-	 * Note there are two places in the device tree to fully describe
-	 * a pci device: one is via compatible string with a format of
-	 * "pciVVVV,DDDD" and the other one is the bdf numbers encoded in
-	 * the device node's reg address property. We read the vendor id
-	 * and device id based on bdf and compare the values with the
-	 * "VVVV,DDDD". If they are the same, then we are good to use bdf
-	 * to read device's bar. But if they are different, we have to rely
-	 * on the vendor id and device id extracted from the compatible
-	 * string and locate the real bdf by pci_find_device(). This is
-	 * because normally we may only know device's device number and
-	 * function number when writing device tree. The bus number is
-	 * dynamically assigned during the pci enumeration process.
-	 */
-	if ((dt_vendor != vendor) || (dt_device != device)) {
-		*bdf = pci_find_device(dt_vendor, dt_device, 0);
-		if (*bdf == -1)
-			return -ENODEV;
-	}
-
-	return 0;
-}
-
-int fdtdec_get_pci_bar32(const void *blob, int node,
-		struct fdt_pci_addr *addr, u32 *bar)
-{
-	pci_dev_t bdf;
 	int barnum;
-	int ret;
-
-	/* get pci devices's bdf */
-	ret = fdtdec_get_pci_bdf(blob, node, addr, &bdf);
-	if (ret)
-		return ret;
 
 	/* extract the bar number from fdt_pci_addr */
 	barnum = addr->phys_hi & 0xff;
@@ -343,7 +295,7 @@ int fdtdec_get_pci_bar32(const void *blob, int node,
 		return -EINVAL;
 
 	barnum = (barnum - PCI_BASE_ADDRESS_0) / 4;
-	*bar = pci_read_bar32(pci_bus_to_hose(PCI_BUS(bdf)), bdf, barnum);
+	*bar = dm_pci_read_bar32(dev, barnum);
 
 	return 0;
 }
