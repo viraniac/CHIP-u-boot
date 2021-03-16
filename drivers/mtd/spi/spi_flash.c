@@ -16,6 +16,7 @@
 #include <spi.h>
 #include <spi_flash.h>
 #include <linux/log2.h>
+#include <dma.h>
 
 #include "sf_internal.h"
 
@@ -454,8 +455,16 @@ int spi_flash_read_common(struct spi_flash *flash, const u8 *cmd,
 	return ret;
 }
 
+/*
+ * TODO: remove the weak after all the other spi_flash_copy_mmap
+ * implementations removed from drivers
+ */
 void __weak spi_flash_copy_mmap(void *data, void *offset, size_t len)
 {
+#ifdef CONFIG_DMA
+	if (!dma_memcpy(data, offset, len))
+		return;
+#endif
 	memcpy(data, offset, len);
 }
 
@@ -980,7 +989,7 @@ int spi_flash_scan(struct spi_flash *flash)
 	ret = spi_flash_cmd(spi, CMD_READ_ID, idcode, sizeof(idcode));
 	if (ret) {
 		printf("SF: Failed to get idcodes\n");
-		return -EINVAL;
+		return ret;
 	}
 
 #ifdef DEBUG

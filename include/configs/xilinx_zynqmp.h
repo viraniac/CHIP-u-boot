@@ -53,12 +53,9 @@
 #define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + 0x2000000)
 
 /* Serial setup */
-#if defined(CONFIG_ZYNQMP_DCC)
-# define CONFIG_ARM_DCC
-# define CONFIG_CPU_ARMV8
-#else
-# define CONFIG_ZYNQ_SERIAL
-#endif
+#define CONFIG_ARM_DCC
+#define CONFIG_CPU_ARMV8
+#define CONFIG_ZYNQ_SERIAL
 
 #define CONFIG_CONS_INDEX		0
 #define CONFIG_BAUDRATE			115200
@@ -89,18 +86,14 @@
 # define CONFIG_CMD_SF
 #endif
 
-#if defined(CONFIG_ZYNQ_SDHCI0) || defined(CONFIG_ZYNQ_SDHCI1)
+#if defined(CONFIG_ZYNQ_SDHCI)
 # define CONFIG_MMC
 # define CONFIG_GENERIC_MMC
 # define CONFIG_SDHCI
-# define CONFIG_ZYNQ_SDHCI
 # define CONFIG_CMD_MMC
 # ifndef CONFIG_ZYNQ_SDHCI_MAX_FREQ
 #  define CONFIG_ZYNQ_SDHCI_MAX_FREQ	200000000
 # endif
-#endif
-
-#if defined(CONFIG_ZYNQ_SDHCI)
 # define CONFIG_FAT_WRITE
 # define CONFIG_CMD_EXT4_WRITE
 #endif

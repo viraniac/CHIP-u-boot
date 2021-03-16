@@ -68,6 +68,7 @@
 #define CONFIG_FB_ADDR			0
 #define CONFIG_VIDEO_BCM2835
 #define CONFIG_SYS_WHITE_ON_BLACK
+#define CONFIG_CONSOLE_SCROLL_LINES	10
 
 /* SD/MMC configuration */
 #define CONFIG_GENERIC_MMC
@@ -117,7 +118,7 @@
 #define CONFIG_PREBOOT			"usb start"
 
 /* Shell */
-#define CONFIG_SYS_MAXARGS		8
+#define CONFIG_SYS_MAXARGS		16
 #define CONFIG_COMMAND_HISTORY
 
 /* Commands */
