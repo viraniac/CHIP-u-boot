@@ -592,3 +592,5 @@ config CMD_YAFFS2
 	  for NAND flash. It incorporates bad-block management and ensures
 	  that device writes are sequential regardless of filesystem
 	  activity.
+
+endmenu
